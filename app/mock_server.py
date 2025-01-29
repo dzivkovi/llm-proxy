@@ -1,65 +1,66 @@
 #!/usr/bin/env python
 from flask import Flask, request, jsonify
 from typing import Dict, Any
-from litellm import completion
+import random
+import time
+import uuid
 
 app = Flask(__name__)
 
+# Simple mock responses that look "wise" but are generic enough
+MOCK_RESPONSES = [
+    "Based on the context, I recommend this approach...",
+    "Here's a solution that should work well...",
+    "Looking at your code, I suggest...",
+    "Let me help you improve this code...",
+    "I see what you're trying to do. Consider this alternative...",
+    "The code could be optimized by...",
+    "Here's how we can enhance this implementation...",
+]
 
-def convert_usage_to_dict(usage: Any) -> Dict[str, int]:
-    """Convert usage object to a dictionary with integer values."""
-    if hasattr(usage, "__dict__"):
-        # If usage is an object with attributes, convert to dict
-        return {
-            "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-            "completion_tokens": getattr(usage, "completion_tokens", 0),
-            "total_tokens": getattr(usage, "total_tokens", 0),
-        }
-    elif isinstance(usage, dict):
-        # If usage is already a dict, return it
-        return usage
-    else:
-        # Default values if usage is None or unexpected type
-        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-
+def calculate_tokens(text: str) -> int:
+    """Rough approximation of tokens (1 token ≈ 4 chars)"""
+    return len(text) // 4
 
 @app.route("/v1/chat/completions", methods=["POST"])
 def chat_completions():
+    # Log the entire incoming request
+    print("\n=== Incoming Request ===")
+    print(f"Headers: {dict(request.headers)}")
+    print(f"Data: {request.get_json()}")
+    print("=====================\n")
+
     data = request.get_json()
-    messages = data.get("messages", [])
-    model = data.get("model", "gpt-3.5-turbo")
+    response_content = random.choice(MOCK_RESPONSES)
+    
+    # Calculate realistic token counts
+    prompt_tokens = sum(calculate_tokens(msg.get("content", "")) for msg in data.get("messages", []))
+    completion_tokens = calculate_tokens(response_content)
 
-    raw_response = completion(
-        model=model,
-        messages=messages,
-        max_tokens=100,
-        temperature=0.7,
-    )
-
-    # Extract assistant text from the litellm response
-    assistant_content = raw_response["choices"][0]["message"]["content"].strip()
-
-    # Convert usage object to dictionary
-    usage_dict = convert_usage_to_dict(raw_response.get("usage"))
-
-    # Construct OpenAI-compatible JSON response
+    # Return a response with realistic metadata
     response_body = {
-        "id": "chatcmpl-temp-id",
+        "id": f"chatcmpl-{uuid.uuid4().hex[:12]}", # OpenAI-like ID
         "object": "chat.completion",
-        "created": 1234567890,
-        "model": model,
+        "created": int(time.time()),  # Current Unix timestamp
+        "model": data.get("model", "gpt-3.5-turbo"),
         "choices": [
             {
                 "index": 0,
-                "message": {"role": "assistant", "content": assistant_content},
+                "message": {
+                    "role": "assistant",
+                    "content": response_content,
+                },
                 "finish_reason": "stop",
             }
         ],
-        "usage": usage_dict,
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        },
     }
 
     return jsonify(response_body)
 
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8888, debug=True)
