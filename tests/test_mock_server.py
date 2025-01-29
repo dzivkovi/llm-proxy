@@ -3,7 +3,7 @@ import requests
 
 def test_mock_server():
     response = requests.post(
-        "http://localhost:8000/v1/chat/completions",
+        "http://localhost:8888/v1/chat/completions",
         json={"messages": [{"role": "user", "content": "Hello!"}]},
         timeout=5,
     )
