@@ -33,8 +33,10 @@ def generate_stream_response_from_remote(query: str):
     query_encoded = urllib.parse.quote_plus(query)
 
     # Build the final URL, e.g.:
-    #   http://127.0.0.1:8000/stream?topNDocuments=3&sessionID=12345&search_query=meaning%20of%20life
+    #   http://127.0.0.1:8000/stream?topNDocuments=3&sessionID=12345&search_query=...
     final_url = f"{STREAM_URL}&search_query={query_encoded}"
+
+    citation_header_emitted = False
 
     with requests.get(final_url, stream=True, timeout=10) as r:
         r.raise_for_status()
@@ -47,40 +49,61 @@ def generate_stream_response_from_remote(query: str):
             # Remove "data: " prefix
             line = raw_line[6:].strip()
 
-            # If your FastAPI mock never sends "[DONE]", skip this check or adapt as needed
+            # If your FastAPI server never sends "[DONE]", skip this check or adapt as needed
             if line == "[DONE]":
-                yield "data: [DONE]\n\n"
                 break
 
-            # Parse the JSON from the FastAPI SSE response: {"type": "...", "data": "..."}
+            # Parse the JSON from the legacy API SSE response
             try:
                 parsed = json.loads(line)
             except json.JSONDecodeError:
                 continue
 
-            # Extract the chunk content (token, citation, etc.)
-            content = parsed.get("data", "")
+            msg_type = parsed.get("type", "response")
+            data_value = parsed.get("data", "")
 
-            # Build OpenAI-like chunk
-            chunk = {
-                "id": f"chatcmpl-{random.randint(1000, 9999)}",
-                "object": "chat.completion.chunk",
-                "created": int(time.time()),
-                "model": "gpt-3.5-turbo",
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": {"content": content + " "},
-                        "finish_reason": None
-                    }
-                ]
-            }
+            if msg_type == "response":
+                # Build OpenAI-like chunk for response text
+                chunk = {
+                    "id": f"chatcmpl-{random.randint(1000, 9999)}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": "gpt-3.5-turbo",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": data_value + " "},
+                            "finish_reason": None
+                        }
+                    ]
+                }
+                yield f"data: {json.dumps(chunk)}\n\n"
+                time.sleep(0.05)
+            elif msg_type == "citation":
+                # Emit citation header once, then individual citation lines
+                if not citation_header_emitted:
+                    content = "\n### Citations:\n"
+                    citation_header_emitted = True
+                else:
+                    content = ""
+                content += f"- {data_value}\n"
+                chunk = {
+                    "id": f"chatcmpl-{random.randint(1000, 9999)}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": "gpt-3.5-turbo",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": content},
+                            "finish_reason": None
+                        }
+                    ]
+                }
+                yield f"data: {json.dumps(chunk)}\n\n"
+                time.sleep(0.05)
 
-            # Stream SSE chunk back
-            yield f"data: {json.dumps(chunk)}\n\n"
-            time.sleep(0.05)
-
-    # After reading all lines or if remote closed, signal we're done
+    # Signal that the stream is done
     yield "data: [DONE]\n\n"
 
 
