@@ -146,8 +146,8 @@ The legacy API provides a simulated streaming response with the following key fe
 - **Response Format:** Each SSE line is in one of the formats:
 
   ```log
-  data: {'type': 'response', 'data': 'word'}
-  data: {'type': 'citation', 'data': 'citation_id'}
+  data: {"type": "response", "data": "word"}
+  data: {"type": "citation", "data": "citation_id"}
   ```
 
 - **Parameters:**
