@@ -72,7 +72,7 @@ def generate_stream_response_from_remote(query: str):
                     "choices": [
                         {
                             "index": 0,
-                            "delta": {"content": data_value + " "},
+                            "delta": {"content": data_value},
                             "finish_reason": None
                         }
                     ]
