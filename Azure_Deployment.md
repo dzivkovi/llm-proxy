@@ -23,7 +23,7 @@ Azure Web Apps uses [Cloud Native Buildpacks](https://buildpacks.io/) through [O
 
 Learn more about buildpacks:
 
-- [Azure App Service Python Guide](https://learn.microsoft.com/en-us/azure/app-service/quickstart-python) - Official Python deployment guide
+- [Deploy a Python (Django, Flask, or FastAPI) web app to Azure App Service](https://learn.microsoft.com/en-us/azure/app-service/quickstart-python) - Official guide
 - [Build and push an image from an app using a Cloud Native Buildpack](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-pack-build) - Azure's buildpack implementation
 - [Why Cloud Native Buildpacks?](https://buildpacks.io/)
 
