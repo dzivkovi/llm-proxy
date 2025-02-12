@@ -4,11 +4,14 @@
 # VSCode
 .vscode
 
+# Azure configuration
+.azure/
+
 ### Flask ###
 instance/*
 !instance/.gitignore
 .webassets-cache
-.env
+.env*
 
 ### Flask.Python Stack ###
 # Byte-compiled / optimized / DLL files

@@ -97,4 +97,7 @@ def chat_completions():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8888, debug=True)
+    import os
+    # Azure uses WEBSITES_PORT, fallback to 8888 for local development
+    port = int(os.environ.get('WEBSITES_PORT', 8888))
+    app.run(host="0.0.0.0", port=port, debug=True)
